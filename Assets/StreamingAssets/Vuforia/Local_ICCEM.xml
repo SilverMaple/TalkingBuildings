@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<QCARConfig xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="qcar_config.xsd">
+  <Tracking>
+    <ImageTarget name="42" size="1.000000 0.668317" />
+    <ImageTarget name="43" size="1.000000 0.668317" />
+    <ImageTarget name="41" size="1.000000 1.143902" />
+    <ImageTarget name="40" size="1.000000 0.750000" />
+    <ImageTarget name="38" size="1.000000 0.685068" />
+    <ImageTarget name="37" size="1.000000 0.954268" />
+    <ImageTarget name="36" size="1.000000 1.333333" />
+    <ImageTarget name="35" size="1.000000 1.333333" />
+    <ImageTarget name="34" size="1.000000 1.333571" />
+    <ImageTarget name="33" size="1.000000 1.333333" />
+    <ImageTarget name="32" size="1.000000 1.333594" />
+    <ImageTarget name="31" size="1.000000 1.374593" />
+    <ImageTarget name="29" size="1.000000 0.448421" />
+    <ImageTarget name="28" size="1.000000 1.008333" />
+    <ImageTarget name="27" size="1.000000 0.750000" />
+    <ImageTarget name="26" size="1.000000 1.333333" />
+    <ImageTarget name="25" size="1.000000 1.333333" />
+    <ImageTarget name="24" size="1.000000 1.333594" />
+    <ImageTarget name="23" size="1.000000 0.750000" />
+    <ImageTarget name="22" size="1.000000 1.333333" />
+    <ImageTarget name="21" size="1.000000 1.724696" />
+    <ImageTarget name="20" size="1.000000 1.093842" />
+    <ImageTarget name="19" size="1.000000 1.122324" />
+    <ImageTarget name="18" size="1.000000 1.073016" />
+    <ImageTarget name="17" size="1.000000 0.963687" />
+    <ImageTarget name="16" size="1.000000 0.981191" />
+    <ImageTarget name="15" size="1.000000 0.788889" />
+    <ImageTarget name="14" size="1.000000 1.333333" />
+    <ImageTarget name="13" size="1.000000 0.835979" />
+    <ImageTarget name="12" size="1.000000 1.333333" />
+    <ImageTarget name="11" size="1.000000 1.309722" />
+    <ImageTarget name="10" size="1.000000 0.611588" />
+    <ImageTarget name="09" size="1.000000 1.261580" />
+    <ImageTarget name="08" size="1.000000 1.276680" />
+    <ImageTarget name="07" size="1.000000 0.750000" />
+    <ImageTarget name="06" size="1.000000 1.179894" />
+    <ImageTarget name="04" size="1.000000 0.750000" />
+    <ImageTarget name="03" size="1.000000 0.818750" />
+    <ImageTarget name="02" size="1.000000 1.640138" />
+    <ImageTarget name="01" size="1.000000 1.528662" />
+  </Tracking>
+</QCARConfig>
