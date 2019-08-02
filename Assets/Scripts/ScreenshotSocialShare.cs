@@ -26,7 +26,7 @@ public class ScreenshotSocialShare : MonoBehaviour
     public void Share()
     {
         Debug.Log("Check condition for sharing...");
-        if (!_isProcessing && !Application.isEditor)
+        if (!_isProcessing && !Application.isEditor)//不是编辑器
         {
             //if (this.hideObject != null)
             //{

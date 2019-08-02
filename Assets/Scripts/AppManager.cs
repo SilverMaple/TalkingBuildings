@@ -26,6 +26,8 @@ public class AppManager : MonoBehaviour
 
     // 账号管理界面
     public GameObject loginPanel;
+    public GameObject userpanel;
+    public GameObject userButton;
     public Button loginButton;
     public Button logoutButton;
     public Button signupButton;
@@ -35,6 +37,8 @@ public class AppManager : MonoBehaviour
 
     // 个人中心界面
     public GameObject personalInformationObject;
+    public GameObject mycomment;
+    public GameObject myplace;
 
     // AR互动界面
     public GameObject arSceneCanvas;
@@ -44,8 +48,9 @@ public class AppManager : MonoBehaviour
     public Button snapshotButton;
     public Button commentButton;
     public InputField barrageInputField;
+    public Button sendBarrageButton;
     public bool showVideo = false;
-    public bool showAudio = true;
+    public bool showAudio = false;
     public bool showBarrage = true;
     public bool showDescription = false;
 
@@ -85,6 +90,26 @@ public class AppManager : MonoBehaviour
         DontDestroyOnLoad(_instance.gameObject);
     }
 
+    // 设置自动对焦，效果不好【挂载脚本到ARCamera下】
+    //VuforiaARController.Instance.RegisterVuforiaStartedCallback(OnVuforiaStarted);
+    //VuforiaARController.Instance.RegisterOnPauseCallback(OnPaused);
+
+    //private void OnVuforiaStarted()
+    //{
+    //    CameraDevice.Instance.SetFocusMode(
+    //        CameraDevice.FocusMode.FOCUS_MODE_CONTINUOUSAUTO);
+    //}
+
+    //private void OnPaused(bool paused)
+    //{
+    //    if (!paused)
+    //    { // resumed
+    //        // Set again autofocus mode when app is resumed
+    //        CameraDevice.Instance.SetFocusMode(
+    //            CameraDevice.FocusMode.FOCUS_MODE_CONTINUOUSAUTO);
+    //    }
+    //}
+
     /// <summary>
     /// 初始化函数，在Update函数前,Awake函数后调用
     /// </summary>
@@ -92,19 +117,21 @@ public class AppManager : MonoBehaviour
     {
         if (!InitialState)
         {
-            AVObject.RegisterSubclass<Comment>();
+            AVObject.RegisterSubclass<Comment>();//复制comment类中的方法
             AVObject.RegisterSubclass<Place>();
 
             Debug.Log("Bind event for buttons");
             Button btn;
 
+            // 登陆注册界面
             btn = (Button)loginButton.GetComponent<Button>();
-            btn.onClick.AddListener(async delegate () { await LoginAsync(); });
-            //btn = (Button)logoutButton.GetComponent<Button>();
-            //btn.onClick.AddListener(delegate () { Logout(); });
+            btn.onClick.AddListener(async delegate () { await LoginAsync(); });//监听委托事件，响应LoginAsync事件
+            btn = (Button)logoutButton.GetComponent<Button>();
+            btn.onClick.AddListener(delegate () { Logout(); });
             btn = (Button)signupButton.GetComponent<Button>();
             btn.onClick.AddListener(async delegate () { await SignupAsync(); });
 
+            // AR互动界面
             btn = (Button)barrageButton.GetComponent<Button>();
             btn.onClick.AddListener(delegate () { ChangeBarrageState(); });
             btn = (Button)commentButton.GetComponent<Button>();
@@ -113,8 +140,13 @@ public class AppManager : MonoBehaviour
             btn.onClick.AddListener(delegate () { ChangeVideoState(); });
             btn = (Button)audioButton.GetComponent<Button>();
             btn.onClick.AddListener(delegate () { ChangeAudioState(); });
+            btn = (Button)sendBarrageButton.GetComponent<Button>();
+            btn.onClick.AddListener(async delegate { await SendBarrage(); });
+            //barrageInputField.onEndEdit.AddListener(async delegate { await SendBarrage(); });
 
-            barrageInputField.onEndEdit.AddListener(delegate { SendBarrage(); });
+            // 个人中心界面
+            btn = (Button)mycomment.GetComponent<Button>();
+            btn.onClick.AddListener(async delegate () { await GetMyComment(); });
 
             Debug.Log("End bind event for buttons");
         }
@@ -136,9 +168,10 @@ public class AppManager : MonoBehaviour
     private void ChangeBarrageState()
     {
         showBarrage = !showBarrage;
-        Debug.Log("ShowBarrage: "+showBarrage);
-        ShowAndroidToastMessage("ShowBarrage: "+showBarrage);
+        Debug.Log("ShowBarrage: " + showBarrage);
+        ShowAndroidToastMessage("ShowBarrage: " + showBarrage);
         barrageInputField.gameObject.SetActive(showBarrage);
+        sendBarrageButton.gameObject.SetActive(showBarrage);
         var imageTargets = GameObject.FindGameObjectWithTag("ImageTargetList").GetComponentsInChildren<Transform>();
         for (int i = 1; i < imageTargets.Length; i++)
         {
@@ -224,8 +257,14 @@ public class AppManager : MonoBehaviour
     /// </summary>
     public void activateARCamera()
     {
+        // 为了防止花屏，闪屏
         deactivateARCamera();
         ARCamera.GetComponent<VuforiaBehaviour>().enabled = true;
+        if (TrackerManager.Instance.GetTracker<ObjectTracker>() != null)
+        {
+            ObjectTracker objTracker = TrackerManager.Instance.GetTracker<ObjectTracker>();
+            objTracker.Start();
+        }
     }
 
     /// <summary>
@@ -233,13 +272,30 @@ public class AppManager : MonoBehaviour
     /// </summary>
     public void deactivateARCamera()
     {
+        //if (TrackerManager.Instance.GetTracker<MarkerTracker>() != null)
+        //{
+        //    MarkerTracker marker = TrackerManager.Instance.GetTracker<MarkerTracker>();
+        //    marker.Stop();
+        //}
+
+        //if (TrackerManager.Instance.GetTracker<TextTracker>() != null)
+        //{
+        //    TextTracker textTracker = TrackerManager.Instance.GetTracker<TextTracker>();
+        //    textTracker.Stop();
+        //}
+
+        if (TrackerManager.Instance.GetTracker<ObjectTracker>() != null)
+        {
+            ObjectTracker objTracker = TrackerManager.Instance.GetTracker<ObjectTracker>();
+            objTracker.Stop();
+        }
+
         ARCamera.GetComponent<VuforiaBehaviour>().enabled = false;
     }
 
     /// <summary>
     /// 初始化AR场景
     /// </summary>
-    //public void InitARScene()
     public async Task InitARScene()
     {
         activateARCamera();
@@ -255,7 +311,7 @@ public class AppManager : MonoBehaviour
             GameObject templateVideoObject = GameObject.FindGameObjectWithTag("VideoTemplate");
             GameObject templateAudioObject = GameObject.FindGameObjectWithTag("AudioTemplate");
             UnityEngine.UI.Image templateNimbusImage = GameObject.FindGameObjectWithTag("NimbusImageTemplate").GetComponentInChildren<UnityEngine.UI.Image>();
-            
+
             float scaleFactor = 0.1f;
             for (int i = 1; i < imageTargets.Length; i++)
             {
@@ -323,7 +379,7 @@ public class AppManager : MonoBehaviour
                 }
 
                 ///*
-                // * Animation Attach
+                // * Animation Attach【Implemented by MyTrackableEventHandler.cs】
                 // * 
                 // */
                 //if (imageTargets[i].name == "ImageTarget (23)" || imageTargets[i].name == "ImageTarget (30)")
@@ -336,7 +392,7 @@ public class AppManager : MonoBehaviour
                 //    //butterflyObject.transform.rotation = Quaternion.FromToRotation(new Vector3(1, 0, 0), new Vector3(-1, 0, 0));
                 //    //butterflyObject.transform.localScale = new Vector3(scaleFactor * 10, scaleFactor * 10, scaleFactor * 10);
                 //}
-                
+
 
                 /*
                  * Video Attach
@@ -344,18 +400,6 @@ public class AppManager : MonoBehaviour
                  */
                 GameObject videoObject = GameObject.Instantiate<GameObject>(templateVideoObject);
                 string videoPath = "Video/video";
-                //switch (imageTargets[i].name)
-                //{
-                //    case "ImageTarget (31)":
-                //        videoPath = "Video/video1";
-                //        break;
-                //    case "ImageTarget (38)":
-                //        videoPath = "Video/video2";
-                //        break;
-                //    case "ImageTarget (39)":
-                //        videoPath = "Video/video3";
-                //        break;
-                //}
                 if (imageTargets[i].name == "ImageTarget (31)")
                     videoPath = "Video/video1";
                 else if (imageTargets[i].name == "ImageTarget (38)")
@@ -372,10 +416,7 @@ public class AppManager : MonoBehaviour
                 videoObject.transform.up = imageTargets[i].up;
                 videoObject.transform.rotation = Quaternion.FromToRotation(new Vector3(1, 0, 0), new Vector3(-1, 0, 0));
                 videoObject.transform.localScale = new Vector3(scaleFactor * 10, scaleFactor * 10, scaleFactor * 10);
-                if (showVideo)
-                {
-                    videoObject.SetActive(true);
-                }
+                videoObject.SetActive(showVideo);
 
                 /*
                  * Audio Attach
@@ -383,24 +424,6 @@ public class AppManager : MonoBehaviour
                  */
                 GameObject audioObject = GameObject.Instantiate<GameObject>(templateAudioObject);
                 string audioPath = "Audio/audio1";
-                //switch (imageTargets[i].name)
-                //{
-                //    case "ImageTarget (23)":
-                //        audioPath = "Audio/audio3";
-                //        break;
-                //    case "ImageTarget (31)":
-                //        audioPath = "Audio/audio1";
-                //        break;
-                //    case "ImageTarget (38)":
-                //        audioPath = "Audio/audio3";
-                //        break;
-                //    case "ImageTarget (30)":
-                //        audioPath = "Audio/audio1";
-                //        break;
-                //    case "ImageTarget (39)":
-                //        audioPath = "Audio/audio2";
-                //        break;
-                //}
                 if (imageTargets[i].name == "ImageTarget (23)")
                     audioPath = "Audio/audio2";
                 else if (imageTargets[i].name == "ImageTarget (31)")
@@ -414,92 +437,42 @@ public class AppManager : MonoBehaviour
                 audioObject.GetComponent<AudioSource>().clip = Resources.Load<AudioClip>(audioPath);
                 audioObject.transform.SetParent(canvasGameObject.transform);
                 audioObject.transform.localPosition = new Vector3(0, 0, 0);
-                if (showAudio)
-                {
-                    audioObject.GetComponent<AudioSource>().enabled = true;
-                }
+                audioObject.GetComponent<AudioSource>().enabled = showAudio;
 
                 /*
                  * Barrage Text Attach
                  * 
                  */
-                //string[] fakeComments;
-                //if (imageTargets[i].name == "ImageTarget (31)")
-                //{
-                //    string[] f = {
-                //        "满洲窗好好看啊！", "我喜欢这首歌！", "满洲窗透过来的光真美！",
-                //        "满满的岭南味～", "流光溢彩～", "我也想要同款窗！",
-                //        "满满的历史回忆呀！", "身为老广，真的很爱老西关建筑了！",
-                //        "老广那位朋友别走！等等我！", "+1", "+10086"
-                //    };
-                //    fakeComments = f;
-                //}
-                //else if (imageTargets[i].name == "ImageTarget (23)")
-                //{
-                //    string[] f = { "姚总到此一游", "有蝴蝶！" };
-                //    fakeComments = f;
-                //}
-                //else if(imageTargets[i].name == "ImageTarget (30)")
-                //{
-                //    string[] f =
-                //    {
-                //        "2019.3.25打卡", "陈总到此一游", "何总到此一游",
-                //        "哈哈可爱的小鸟"
-                //    };
-                //    fakeComments = f;
-                //}
-                //else if(imageTargets[i].name == "ImageTarget (38)")
-                //{
-                //    string[] f = {"凉快", "这个门好复杂", "有朋友知道怎么用吗", "不知道", "emmm",
-                //          "老广打卡", "2019.4.15打卡", "大楚到此一游", "前面朋友点开视频看",
-                //           "哇厉害了", "学到了"
-                //    };
-                //    fakeComments = f;
-                //}
-                //else if (imageTargets[i].name == "ImageTarget (39)")
-                //{
-                //    string[] f = { "最爱广式云吞面", "好吃" };
-                //    fakeComments = f;
-                //}
-                //else
-                //{
-                //    string[] f = { };
-                //    fakeComments = f;
-                //}
-                List<string> imageTargetComments = await GetPlaceComment(imageTargets[i].name);
+                //List<string> imageTargetComments = await GetPlaceComment(imageTargets[i].name);
 
-                scaleFactor /= 5f;
-                foreach (var s in imageTargetComments)
-                {
-                    UnityEngine.UI.Image tmpImage = UnityEngine.UI.Image.Instantiate<UnityEngine.UI.Image>(templateImage);
-                    tmpImage.transform.SetParent(canvasGameObject.transform);
-                    
-                    
-                    tmpImage.transform.rotation = Quaternion.FromToRotation(new Vector3(0, 1, 0), new Vector3(0, 0, 1));
-                    tmpImage.transform.localPosition = new Vector3(
-                        UnityEngine.Random.Range(-Screen.width / 2 * scaleFactor, Screen.width / 2 * scaleFactor),
-                        0,
-                        UnityEngine.Random.Range(-Screen.height / 2 * scaleFactor, Screen.height / 2 * scaleFactor)
-                    );
-                    tmpImage.transform.localScale = new Vector3(scaleFactor / 2, scaleFactor / 2, scaleFactor / 2);
+                //scaleFactor /= 5f;
+                //foreach (var s in imageTargetComments)
+                //{
+                //    UnityEngine.UI.Image tmpImage = UnityEngine.UI.Image.Instantiate<UnityEngine.UI.Image>(templateImage);
+                //    tmpImage.transform.SetParent(canvasGameObject.transform);
 
-                    tmpImage.GetComponentInChildren<Text>().text = s;
-                    //tmpImage.GetComponentInChildren<Text>().transform.localScale = new Vector3(scaleFactor, scaleFactor, scaleFactor);
-                    tmpImage.GetComponentInChildren<Text>().horizontalOverflow = HorizontalWrapMode.Overflow;
+                //tmpImage.transform.rotation = canvasGameObject.GetChild(0).rotation;
+                //    tmpImage.transform.localPosition = new Vector3(
+                //        UnityEngine.Random.Range(-Screen.width / 2 * scaleFactor, Screen.width / 2 * scaleFactor),
+                //        0,
+                //        UnityEngine.Random.Range(-Screen.height / 2 * scaleFactor, Screen.height / 2 * scaleFactor)
+                //    );
+                //    tmpImage.transform.localScale = new Vector3(scaleFactor / 2, scaleFactor / 2, scaleFactor / 2);
 
-                    tmpImage.gameObject.AddComponent<TextItem>();
-                    tmpImage.GetComponent<TextItem>().speed = UnityEngine.Random.Range(30f * scaleFactor, 60f * scaleFactor);
-                    tmpImage.GetComponent<TextItem>().enabled = true;
+                //    tmpImage.GetComponentInChildren<Text>().text = s;
+                //    //tmpImage.GetComponentInChildren<Text>().transform.localScale = new Vector3(scaleFactor, scaleFactor, scaleFactor);
+                //    tmpImage.GetComponentInChildren<Text>().horizontalOverflow = HorizontalWrapMode.Overflow;
 
-                    if (!showBarrage)
-                    {
-                        tmpImage.gameObject.SetActive(false);
-                    }
-                }
+                //    tmpImage.gameObject.AddComponent<TextItem>();
+                //    tmpImage.GetComponent<TextItem>().speed = UnityEngine.Random.Range(30f * scaleFactor, 60f * scaleFactor);
+                //    tmpImage.GetComponent<TextItem>().enabled = true;
+
+                //    tmpImage.gameObject.SetActive(showBarrage);
+                //}
             }
 
-            Debug.Log("Init button event");
             Debug.Log("End initialization");
+            ShowAndroidToastMessage("End initialization");
 
             //InitialState = true;
             // 每次切换场景都需要初始化
@@ -509,11 +482,11 @@ public class AppManager : MonoBehaviour
     /// <summary>
     /// 发送弹幕显示
     /// </summary>
-    //public void SendBarrage()
     public async Task SendBarrage()
     {
         string comment = barrageInputField.text;
         Debug.Log("Send barrage: " + comment);
+        ShowAndroidToastMessage("Send barrage: " + comment);
         // editor 状态没有摄像头将无法获取
         IEnumerable<TrackableBehaviour> trackerIEnumerable = TrackerManager.Instance.GetStateManager().GetActiveTrackableBehaviours();
         Debug.Log(trackerIEnumerable.Count());
@@ -534,14 +507,27 @@ public class AppManager : MonoBehaviour
                     ShowAndroidToastMessage(rs.Message);
                     return;
                 }
+                else
+                {
+                    ShowAndroidToastMessage("Send success!");
+                }
                 Transform canvasGameObject = currentTracker.gameObject.transform.Find("DisplayCanvas");
                 UnityEngine.UI.Image templateImage = GameObject.FindGameObjectWithTag("ImageTemplate").GetComponentInChildren<UnityEngine.UI.Image>();
                 UnityEngine.UI.Image tmpImage = UnityEngine.UI.Image.Instantiate<UnityEngine.UI.Image>(templateImage);
                 tmpImage.transform.SetParent(canvasGameObject.transform);
 
+
                 float scaleFactor = 0.1f / 5f;
                 tmpImage.transform.up = currentTracker.gameObject.transform.up;
-                tmpImage.transform.rotation = Quaternion.FromToRotation(new Vector3(0, 0, -1), new Vector3(0, 0, 1));
+
+                tmpImage.transform.rotation = canvasGameObject.GetChild(0).rotation;
+                //tmpImage.transform.rotation = Quaternion.FromToRotation(new Vector3(0, 0, -1), new Vector3(0, 0, 1));
+
+                for (int i = 0; i < canvasGameObject.childCount; i++)
+                {
+                    Console.WriteLine(canvasGameObject.GetChild(i).name, canvasGameObject.GetChild(i).rotation);
+                }
+                Console.WriteLine(tmpImage.transform.rotation);
                 tmpImage.transform.localPosition = new Vector3(
                     //UnityEngine.Random.Range(-Screen.width / 2 * scaleFactor, Screen.width / 2 * scaleFactor),
                     -Screen.height / 2 * scaleFactor,
@@ -558,147 +544,54 @@ public class AppManager : MonoBehaviour
                 tmpImage.GetComponent<TextItem>().speed = UnityEngine.Random.Range(30f * scaleFactor, 60f * scaleFactor);
                 tmpImage.GetComponent<TextItem>().enabled = true;
 
-                if (!showBarrage)
-                {
-                    tmpImage.gameObject.SetActive(false);
-                }
+                tmpImage.gameObject.SetActive(showBarrage);
             }
         }
         else
         {
+            // Begin Test
+            string barrageText = barrageInputField.text.Trim();
+            if (barrageText != "")
+            {
+                //Transform canvasGameObject = currentTracker.gameObject.transform.Find("DisplayCanvas");
+                var imageTargets = GameObject.FindGameObjectWithTag("ImageTargetList").GetComponentsInChildren<Transform>();
+                GameObject aaa = imageTargets[1].gameObject;
+                Transform canvasGameObject = imageTargets[2];
+                //Transform canvasGameObject = aaa.transform.Find("DisplayCanvas");
+                UnityEngine.UI.Image templateImage = GameObject.FindGameObjectWithTag("ImageTemplate").GetComponentInChildren<UnityEngine.UI.Image>();
+                UnityEngine.UI.Image tmpImage = UnityEngine.UI.Image.Instantiate<UnityEngine.UI.Image>(templateImage);
+                tmpImage.transform.SetParent(canvasGameObject.transform);
+
+                float scaleFactor = 0.1f / 5f;
+                tmpImage.transform.up = aaa.transform.up;
+                tmpImage.transform.rotation = canvasGameObject.GetChild(0).rotation;
+                //tmpImage.transform.rotation = Quaternion.FromToRotation(new Vector3(0, 0, -1), new Vector3(0, 0, 1));
+                tmpImage.transform.localPosition = new Vector3(
+                    //UnityEngine.Random.Range(-Screen.width / 2 * scaleFactor, Screen.width / 2 * scaleFactor),
+                    -Screen.height / 2 * scaleFactor,
+                    0,
+                    UnityEngine.Random.Range(-Screen.height / 2 * scaleFactor, Screen.height / 2 * scaleFactor)
+                );
+                tmpImage.transform.localScale = new Vector3(scaleFactor / 2, scaleFactor / 2, scaleFactor / 2);
+
+                tmpImage.GetComponentInChildren<Text>().color = Color.red;
+                tmpImage.GetComponentInChildren<Text>().text = barrageText;
+                tmpImage.GetComponentInChildren<Text>().horizontalOverflow = HorizontalWrapMode.Overflow;
+
+                tmpImage.gameObject.AddComponent<TextItem>();
+                tmpImage.GetComponent<TextItem>().speed = UnityEngine.Random.Range(30f * scaleFactor, 60f * scaleFactor);
+                tmpImage.GetComponent<TextItem>().enabled = true;
+
+                tmpImage.gameObject.SetActive(showBarrage);
+            }
+            // End Test
+
             Debug.Log("No target found.");
         }
+        // clear text
+        barrageInputField.text = "";
     }
 
-    async Task testAsync()
-    {
-
-        //var knife = new GameEquip();
-        //var className = knife.ClassName;
-        //Debug.Log(className);
-        //knife.Name = "xiaodao";
-        //knife.AttackValue = 1;
-        //Debug.Log("1");
-        //await knife.SaveAsync();
-        //Debug.Log("2");
-
-        //var query = new AVQuery<GameEquip>();
-        //await query.FindAsync();
-
-        //await knife.DeleteAsync();
-
-        //AVQuery<AVObject> query = new AVQuery<AVObject>("GameEquip").WhereEqualTo("name", "短剑");
-
-        //AVQuery<AVObject> query = new AVQuery<AVObject>("GameEquip");
-        //AVObject gameEquip = await query.GetAsync("5c98dbbc67f356006212604d");
-        //Debug.Log(gameEquip.ObjectId);
-
-        //var equipBag = new AVObject("GameEquipBag");
-        //equipBag["scale"] = 20;
-        //equipBag["name"] = "装备背包";
-
-        //var equip = new AVObject("GameEquip");
-        //equip["name"] = "短剑";
-        //equip["attackValue"] = 5;
-
-        //equip["gameEquipBag"] = equipBag;
-        //await equip.SaveAsync();
-
-        // find all equipments that are in equip bag
-        //var gameEquipBag = AVObject.CreateWithoutData("GameEquipBag", "5c98dbbcfe88c2006f6a512e");
-        //var query = new AVQuery<AVObject>("GameEquip");
-        //query = query.WhereEqualTo("gameEquipBag", gameEquipBag);
-        //var equipments = (await query.FindAsync()).ToList();
-        //equipments.ForEach((equip) =>
-        //{
-        //    var name = equip.Get<string>("name");
-        //    Debug.Log(name);
-        //});
-
-        /*
-         * key-value schema-free
-         */
-        //var equip = new AVObject("GameEquip");
-        //equip["name"] = "sword";
-        //equip["attackValue"] = 5;
-        //equip["level"] = 1;
-        //await equip.SaveAsync();
-        //Debug.Log("Equip: " + equip.ObjectId);
-
-        /*
-         * Data type
-         */
-        //int testNumber = 2018;
-        //float testFloat = 1.23f;
-        //double testDouble = 3.2D;
-
-        //bool testBool = true;
-        //string testString = testNumber + " 年度音乐排行";
-        //DateTime testDate = DateTime.Today;
-        //byte[] testData = System.Text.Encoding.UTF8.GetBytes("短篇小说");
-
-        //List<int> testNumbers = new List<int>();
-        //testNumbers.Add(testNumber);
-        //testNumbers.Add(123);
-        //testNumbers.Add(456);
-
-        //var testDictionary = new Dictionary<string, object>();
-        //testDictionary.Add("number", testNumber);
-        //testDictionary.Add("string", testString);
-
-        //var testObject = new AVObject("DataTypes");
-        //testObject["testInteger"] = testNumber;
-        //testObject["testFloat"] = testFloat;
-        //testObject["testDouble"] = testDouble;
-        //testObject["testBoolean"] = testBool;
-        //testObject["testDate"] = testDate;
-        //testObject["testData"] = testData;
-        //testObject["testArrayList"] = testNumbers;
-        //testObject["testDictionary"] = testDictionary;
-        //await testObject.SaveAsync();
-        //Debug.Log("TestObject: " + testObject.ObjectId);
-        //Debug.Log(testObject["testArrayList"]);
-
-        //AVQuery<AVObject> query = new AVQuery<AVObject>("DataTypes");
-        //AVObject ttt = await query.GetAsync(testObject.ObjectId);
-        //Debug.Log(ttt.Keys);
-        //Debug.Log(((List<Int32>)testObject["testArrayList"]).First());
-        //Debug.Log(ttt["testArrayList"]);
-        //List<System.Object> tt = (List<System.Object>)ttt["testArrayList"];
-        //foreach(var sss in tt)
-        //{
-        //    Debug.Log((Int32)sss);
-        //}
-        //Debug.Log(testObject["testArrayList"]+" 222 ");
-
-        /*
-         * Get attribute
-         */
-        //var equipBag = new AVObject("GameEquipBag");
-        //equipBag["scale"] = 20;
-        //equipBag["name"] = "Equip Bag";
-        //await equipBag.SaveAsync();
-
-        //int bagScale = equipBag.Get<int>("scale");
-        //string bagName = equipBag.Get<string>("name");
-        //DateTime? createdAt = equipBag.CreatedAt;
-        //DateTime? updatedAt = equipBag.UpdatedAt;
-
-        //Debug.Log(String.Format("Equip Bag: {0}, {1}, {2}, {3}, {4}",
-        //    bagScale, bagName, equipBag.ObjectId, createdAt, updatedAt));
-
-        //if (equipBag.TryGetValue("name", out string tryBagName))
-        //{
-        //    Debug.Log(tryBagName);
-        //}
-
-        /*
-         * Query object
-         */
-        //AVQuery<AVObject> query = new AVQuery<AVObject>("GameEquip");
-        //AVObject equipment = await query.GetAsync("5c98cea312215f00728b7fc7");
-        //Debug.Log("Query: " + equipment);
-    }
     #endregion
 
     #region AccountManagementInterface
@@ -709,9 +602,14 @@ public class AppManager : MonoBehaviour
     public async Task<bool> CheckUserStateAsync()
     {
         var user = AVUser.CurrentUser;
-        var IsAuth = await user.IsAuthenticatedAsync();
-        if (user == null || user.IsAnonymous || !IsAuth)
+        if (user == null)
         {
+            return false;
+        }
+        var IsAuth = await user.IsAuthenticatedAsync();
+        if (user.IsAnonymous || !IsAuth)
+        {
+
             Debug.Log(String.Format("User==null:{0} Anonymous: {1} Authenticated:{2}",
                 user == null, user.IsAnonymous, !IsAuth));
             return false;
@@ -828,6 +726,7 @@ public class AppManager : MonoBehaviour
     public async Task<ResultStatus> LoginAsync(string loginType = "UserName")
     {
         Debug.Log("Login Begin: ");
+        //获取输入框的值
         var phoneNumber = "";
         var userName = accountInputField.text;
         var password = passwordInputField.text;
@@ -861,13 +760,15 @@ public class AppManager : MonoBehaviour
             {
                 result.Message = String.Format("Login: {0} at {1}", user.Username, user.UpdatedAt);
                 result.IsSuccess = true;
-                var nickNameText = personalInformationObject.GetComponentsInChildren<Text>().Where<Text>(text => text.name== "nickNameText").First();
+                //获取到子孙节点
+                var nickNameText = personalInformationObject.GetComponentsInChildren<Text>().Where<Text>(text => text.name == "nickNameText").First();
                 nickNameText.text = user.Username;
 
                 Debug.Log(result.Message);
                 loginPanel.SetActive(false);
+                userButton.SetActive(false);//个人登录的按钮入口
                 ShowAndroidToastMessage(result.Message);
-                
+
                 return result;
             }
             else
@@ -876,6 +777,7 @@ public class AppManager : MonoBehaviour
                     t.Exception.Message, t.Exception.InnerExceptions[0].Message);
                 result.IsSuccess = false;
                 Debug.Log(result.Message);
+
                 ShowAndroidToastMessage(result.Message);
                 return result;
             }
@@ -901,6 +803,11 @@ public class AppManager : MonoBehaviour
         if (user == null)
         {
             Debug.Log("Logout success.");
+            loginPanel.SetActive(true);
+            userpanel.SetActive(false);
+            userButton.SetActive(true);
+            var nickNameText = personalInformationObject.GetComponentsInChildren<Text>().Where<Text>(text => text.name == "nickNameText").First();
+            nickNameText.text = "";
         }
         else
         {
@@ -1068,11 +975,10 @@ public class AppManager : MonoBehaviour
     {
         ResultStatus result;
 
-        AVQuery<Place> query = new AVQuery<Place>("Place").WhereEqualTo("placeName", placeName);
-        Debug.Log("Herer");
-        Task<IEnumerable<Place>> t = query.FindAsync();
+        AVQuery<Place> query = new AVQuery<Place>("Place").WhereEqualTo("placeName", placeName);//获得地点
+        Task<IEnumerable<Place>> t = query.FindAsync();//查找
         // 使用toList()可以获取，GetEnumerator()返回null
-        Place place = (await t).ToList().First();
+        Place place = (await t).ToList().First();//开启另一个协程，获取第一个地点的评论
         if (t.IsCanceled || t.IsFaulted)
         {
             result.IsSuccess = false;
@@ -1118,13 +1024,15 @@ public class AppManager : MonoBehaviour
         return result;
     }
 
-
+    /// <summary>
+    /// 获取当前地点所有评论
+    /// </summary>
+    /// <param name="placeName"></param>
     public async Task<List<string>> GetPlaceComment(string placeName)
     {
         List<string> result = new List<string>();
 
         AVQuery<Place> query = new AVQuery<Place>("Place").WhereEqualTo("placeName", placeName);
-        Debug.Log("Herer");
 
         Task<IEnumerable<Place>> t = query.FindAsync();
         // 使用toList()可以获取，GetEnumerator()返回null
@@ -1167,6 +1075,85 @@ public class AppManager : MonoBehaviour
         return result;
     }
 
+    /// <summary>
+    /// 获取当前用户所有评论
+    /// </summary>
+    public async Task<List<string>> GetMyComment()
+    {
+        List<string> result = new List<string>();
+
+        if (!await CheckUserStateAsync())
+        {
+            return null;
+        }
+
+        var user = AVUser.CurrentUser;
+        AVQuery<Comment> query = new AVQuery<Comment>("Comment").WhereEqualTo("user", user);//请求条件，用户名相同
+        Debug.Log("getMyPlaceComment");
+
+        Task<IEnumerable<Comment>> t = query.FindAsync();//找到匹配项
+        // 使用toList()可以获取，GetEnumerator()返回null
+        //Place myPlace = (await t).ToList();
+        List<Comment> myComment = (await t).ToList();
+
+        // AVQuery<Place> queryPlace = new AVQuery<Place>("Place");
+        //Task<IEnumerable<Place>> p = queryPlace.FindAsync();//找到匹配项
+        // 使用toList()可以获取所有地点的评论
+        //List<Place> myPlace = (await p).ToList();
+
+
+        if (t.IsCanceled || t.IsFaulted)
+        {
+            string message = String.Format("Get my comment failed: {0} {1}",
+                t.Exception.Message, t.Exception.InnerExceptions[0].Message);
+            Debug.Log(message);
+        }
+        else
+        {
+            bool flag = await CheckUserStateAsync();
+            if (!flag) // 用户未登录
+            {
+                string message = String.Format("Get place comment failed: {0}",
+                    "User not login");
+                Debug.Log(message);
+            }
+            /*else if (user == null) // 地点不存在
+            {
+                string message = String.Format("Get place comment failed: {0}",
+                    "");
+                Debug.Log(message);
+            }*/
+            else
+            {
+                //List<Comment> comments = (await new AVQuery<Comment>().WhereEqualTo("place", place).FindAsync()).ToList();//地点相同的comment
+                //HashSet<string> tagList = new HashSet<string> { };//创建合集和交集taglist
+                Debug.Log(myComment.Count());
+                //每一项内容添加进
+
+
+
+                /*foreach (Comment c in myComment)
+                {
+                    foreach (Place p2 in myPlace)
+                    {
+                        if(p2.PlaceName==c.Place.PlaceName)
+
+                    }
+                    {
+
+                        result.Add(p.PlaceName);
+                    }
+
+                    result.Add(c.Content);
+                }*/
+
+
+                string message = String.Format("Get place comment success: {0}", myComment.Count());
+                Debug.Log(message);
+            }
+        }
+        return result;
+    }
     #endregion
 
     #region Place
@@ -1176,8 +1163,7 @@ public class AppManager : MonoBehaviour
     /// <param name="place"></param>
     public async void UpdatePlaceAvgRating(Place place)
     {
-        List<Comment> comments = (await new AVQuery<Comment>()
-            .WhereEqualTo("place", place).FindAsync()).ToList();
+        List<Comment> comments = (await new AVQuery<Comment>().WhereEqualTo("place", place).FindAsync()).ToList();
         double ratingSum = 0;
         //List<string> tagList = new List<string>{};
         HashSet<string> tagList = new HashSet<string> { };
@@ -1301,4 +1287,7 @@ public class AppManager : MonoBehaviour
         }
     }
     #endregion
+
+
+
 }

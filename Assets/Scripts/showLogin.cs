@@ -28,12 +28,18 @@ public class showLogin : MonoBehaviour
 
     public void SendResetEmail()
     {
-        if (inputFiled == null)
+        if (inputFiled.text == null)//判定无效？？
         {
+            
+            showpanle.SetActive(false);
             return;
         }
-        AppManager.Instance.RequestResetPassword(inputFiled.text, "Email");
-        showpanle.SetActive(true);
+        else
+        {
+           AppManager.Instance.RequestResetPassword(inputFiled.text, "Email");
+           showpanle.SetActive(true);
+        }
+        
         //hidepanle.SetActive(false);
     }
 
@@ -49,7 +55,7 @@ public class showLogin : MonoBehaviour
         hidepanle.SetActive(isshow);
         if (AppManager.Instance.InitialState)
         {
-            AppManager.Instance.deactivateARCamera();
+            AppManager.Instance.deactivateARCamera();//关闭
         }
     }
 

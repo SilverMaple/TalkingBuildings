@@ -507,7 +507,7 @@ PlayerSettings:
   - m_BuildTarget: Android
     m_Enabled: 1
   - m_BuildTarget: Standalone
-    m_Enabled: 0
+    m_Enabled: 1
   - m_BuildTarget: Metro
     m_Enabled: 0
   openGLRequireES31: 0
