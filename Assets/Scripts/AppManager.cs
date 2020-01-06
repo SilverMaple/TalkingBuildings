@@ -260,11 +260,12 @@ public class AppManager : MonoBehaviour
         // 为了防止花屏，闪屏
         deactivateARCamera();
         ARCamera.GetComponent<VuforiaBehaviour>().enabled = true;
-        if (TrackerManager.Instance.GetTracker<ObjectTracker>() != null)
-        {
-            ObjectTracker objTracker = TrackerManager.Instance.GetTracker<ObjectTracker>();
-            objTracker.Start();
-        }
+        // 设置ARCamera的World Center Mode 即可解决
+        //if (TrackerManager.Instance.GetTracker<ObjectTracker>() != null)
+        //{
+        //    ObjectTracker objTracker = TrackerManager.Instance.GetTracker<ObjectTracker>();
+        //    objTracker.Start();
+        //}
     }
 
     /// <summary>
@@ -284,11 +285,11 @@ public class AppManager : MonoBehaviour
         //    textTracker.Stop();
         //}
 
-        if (TrackerManager.Instance.GetTracker<ObjectTracker>() != null)
-        {
-            ObjectTracker objTracker = TrackerManager.Instance.GetTracker<ObjectTracker>();
-            objTracker.Stop();
-        }
+        //if (TrackerManager.Instance.GetTracker<ObjectTracker>() != null)
+        //{
+        //    ObjectTracker objTracker = TrackerManager.Instance.GetTracker<ObjectTracker>();
+        //    objTracker.Stop();
+        //}
 
         ARCamera.GetComponent<VuforiaBehaviour>().enabled = false;
     }
